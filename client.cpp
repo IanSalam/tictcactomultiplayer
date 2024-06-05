@@ -1,68 +1,64 @@
-// client.cpp
+#include <iostream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <iostream>
-#include <string>
 
-#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "Ws2_32.lib")
 
-#define PORT 8080
+void printBoard(const std::string& boardString) {
+    std::cout << boardString << std::endl;
+}
 
 int main() {
     WSADATA wsaData;
-    int iResult;
-
-    // Initialize Winsock
-    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-        std::cerr << "WSAStartup failed: " << iResult << std::endl;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (result != 0) {
+        std::cerr << "WSAStartup failed: " << result << std::endl;
         return 1;
     }
 
-    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == INVALID_SOCKET) {
-        std::cerr << "Socket creation error: " << WSAGetLastError() << std::endl;
+    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET) {
+        std::cerr << "Socket creation failed" << std::endl;
         WSACleanup();
         return 1;
     }
 
-    sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(8080);
+    serverAddr.sin_addr.s_addr = inet_addr("10.252.135.101");
 
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    iResult = inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
-    if (iResult <= 0) {
-        std::cerr << "Invalid address/ Address not supported" << std::endl;
-        closesocket(sock);
+
+    if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        std::cerr << "Connection failed" << std::endl;
+        closesocket(clientSocket);
         WSACleanup();
         return 1;
     }
 
-    iResult = connect(sock, (sockaddr*)&serv_addr, sizeof(serv_addr));
-    if (iResult == SOCKET_ERROR) {
-        std::cerr << "Connection failed: " << WSAGetLastError() << std::endl;
-        closesocket(sock);
-        WSACleanup();
-        return 1;
+    std::cout << "Connected to server!" << std::endl;
+
+    while (true) {
+        char boardBuffer[256];
+        int boardBytes = recv(clientSocket, boardBuffer, sizeof(boardBuffer), 0);
+        if (boardBytes <= 0) {
+            std::cerr << "Receive board failed" << std::endl;
+            break;
+        }
+        boardBuffer[boardBytes] = '\0';
+        printBoard(boardBuffer);
+
+        int move;
+        std::cout << "Player 2, enter a number (0-8): ";
+        std::cin >> move;
+
+        if (send(clientSocket, (char*)&move, sizeof(move), 0) < 0) {
+            std::cerr << "Send failed" << std::endl;
+            break;
+        }
     }
 
-    std::string message = "Hello from client";
-    send(sock, message.c_str(), message.length(), 0);
-    std::cout << "Hello message sent" << std::endl;
-
-    char buffer[1024] = {0};
-    int valread = recv(sock, buffer, 1024, 0);
-    if (valread == SOCKET_ERROR) {
-        std::cerr << "Recv failed: " << WSAGetLastError() << std::endl;
-        closesocket(sock);
-        WSACleanup();
-        return 1;
-    }
-    std::cout << "Message from server: " << buffer << std::endl;
-
-    closesocket(sock);
+    closesocket(clientSocket);
     WSACleanup();
-
     return 0;
 }
