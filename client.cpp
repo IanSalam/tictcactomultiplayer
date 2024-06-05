@@ -1,6 +1,7 @@
 #include <iostream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include "tictacto.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -26,8 +27,7 @@ int main() {
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(8080);
-    serverAddr.sin_addr.s_addr = inet_addr("10.252.135.101");
-
+    serverAddr.sin_addr.s_addr = inet_addr("10.252.135.101"); // Replace with server IP address
 
     if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         std::cerr << "Connection failed" << std::endl;
@@ -40,7 +40,7 @@ int main() {
 
     while (true) {
         char boardBuffer[256];
-        int boardBytes = recv(clientSocket, boardBuffer, sizeof(boardBuffer), 0);
+        int boardBytes = recv(clientSocket, boardBuffer, sizeof(boardBuffer) - 1, 0);
         if (boardBytes <= 0) {
             std::cerr << "Receive board failed" << std::endl;
             break;

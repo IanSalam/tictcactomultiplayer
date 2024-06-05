@@ -1,0 +1,2 @@
+g++ -o server.exe server.cpp tictacto.cpp -lws2_32
+g++ -g client.cpp -o client -lws2_32 
